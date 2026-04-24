@@ -2,25 +2,24 @@
 
 ## 背景
 
-当前 `plyr-cdn` 已经作为独立播放器页面部署，通过 `EmbeddedPage` 接入白板，并在页面内部使用 `@netless/app-embedded-page-sdk` 同步播放器状态。
+当前 `plyr-cdn` 作为独立播放器页面部署，并通过白板侧传入的单一入口 URL 进行访问。
 
-现状有一个明确限制：
+在 `EmbeddedPage` 场景下，播放器入口的核心约束是：
 
-- `EmbeddedPage` 当前只有一个同步入口 URL，即 `attributes.src`
+- 白板侧只同步一个入口 URL，即 `attributes.src`
 - `app-embedded-page` 在 setup 阶段直接把该 URL 赋值给 `iframe.src`
-- 这意味着同一个 app 实例里，所有端默认都会加载同一个页面地址
+- 这意味着同一个 app 实例里，各端默认都会加载同一个页面地址
 
-当前代码锚点：
+因此，多区域部署的核心问题不是播放器同步状态，而是如何让这一个入口 URL 具备区域路由能力。
 
-- `app-embedded-page/src/index.ts`
-  - `Attributes.src` 定义：`/Users/hongqiuer/work/netless-app/packages/app-embedded-page/src/index.ts`
-  - `iframe.src = attrs.src`：`/Users/hongqiuer/work/netless-app/packages/app-embedded-page/src/index.ts`
+代码锚点：
+
+- `Attributes.src` 定义：
+  - `/Users/hongqiuer/work/netless-app/packages/app-embedded-page/src/index.ts`
+- `iframe.src = attrs.src`：
+  - `/Users/hongqiuer/work/netless-app/packages/app-embedded-page/src/index.ts`
 - `fastboard-demo` 当前 `Embedded Plyr` 接法：
   - `/Users/hongqiuer/work/fastboard-demo/src/behaviors/fastboard.ts`
-- `plyr-cdn` 当前的播放器同步状态仍然放在 `store.state`
-  - `/Users/hongqiuer/work/plyr-cdn/README.md`
-
-因此，多区域部署的核心问题不是播放器同步状态，而是如何让 `src` 这个单一入口 URL 具备区域路由能力。
 
 ## 目标
 
@@ -34,7 +33,7 @@
 
 - `EmbeddedPage` 模型不变
 - `store.state` 结构不变
-- iOS / Web / fastboard-demo 接入方式尽量稳定
+- 业务侧接入方式尽量稳定
 
 ## 结论
 
@@ -68,7 +67,7 @@ type EmbeddedPlyrLaunchArgs = {
   title: string;
   entryUrl: string;
   route: EmbeddedPlyrRouteConfig;
-  data: EmbeddedPlyrStore;
+  data: Record<string, unknown>;
 };
 
 function createEmbeddedPlyrAttributes(args: EmbeddedPlyrLaunchArgs) {
@@ -133,7 +132,7 @@ https://us-origin.example.com/plyr/2026.04.23/index.html
 
 - 不需要修改 `EmbeddedPage`
 - 白板侧始终只有一个 `src`
-- iOS / Web / fastboard-demo 接入保持一致
+- 业务侧接入保持一致
 - 运维边界清晰
 - 后续升级或回滚只调整调度层和区域源站
 
@@ -242,7 +241,7 @@ https://us-cdn.example.com/plyr/2026.04.23/index.html
 
 优先级建议：
 
-1. 如果入口网关支持，优先在边缘直接做 302/307 跳转
+1. 如果入口网关支持，优先在边缘直接做 `302/307` 跳转
 2. 如果没有边缘能力，就用 `bootstrap.html + /resolve API`
 
 ### resolver API 草案
@@ -378,6 +377,18 @@ location.replace(result.url + location.search + location.hash);
 
 ---
 
+## 风险提示
+
+需要注意：
+
+- 区域化 CDN 只能解决播放器页面本身的就近访问
+- 区域路由并不等于媒体源也会随之自动可达
+- 播放器页面、resolver、调度规则都要有 fallback
+- 所有区域节点应保持同版本构建，避免跨区域行为不一致
+- 调度层或 resolver 层建议带上 `traceId` 或等价日志字段，方便排障
+
+---
+
 ## 明确建议
 
 最终建议如下：
@@ -395,22 +406,6 @@ location.replace(result.url + location.search + location.hash);
 
 ---
 
-## 风险提示
-
-需要注意：
-
-- 区域化 CDN 只能解决播放器页面本身的就近访问
-- 如果媒体源是 YouTube，中国节点即使能加载播放器页，也不代表 YouTube 一定可播
-- 这属于媒体源可达性问题，不属于 `EmbeddedPage` 或 `plyr-cdn` 区域路由问题
-
-另外还要注意：
-
-- 版本必须固定，不要让中国、新加坡、美国长期跑不同构建版本
-- 所有区域节点都要有 fallback 策略
-- resolver 或调度规则要有 traceId 或日志字段，方便排障
-
----
-
 ## 本项目建议后续动作
 
 建议在 `plyr-cdn` 中补充：
@@ -422,4 +417,3 @@ location.replace(result.url + location.search + location.hash);
    - resolver API 文档
 4. 若采用方案 A，则补充一份：
    - 域名 / GTM / CDN 配置清单
-

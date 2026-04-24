@@ -11,6 +11,8 @@ export interface PlayerStoreState {
   provider?: MediaProvider;
   type: string;
   poster: string;
+  youtubeOrigin?: string;
+  youtubeWidgetReferrer?: string;
   useCustomControls: boolean;
   volume: number;
   muted: boolean;

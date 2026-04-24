@@ -6,6 +6,8 @@ export const DEFAULT_STORE_STATE: Omit<PlayerStoreState, "playTimeState"> = {
   provider: undefined,
   type: "",
   poster: "",
+  youtubeOrigin: undefined,
+  youtubeWidgetReferrer: undefined,
   useCustomControls: true,
   volume: 1,
   muted: false,
@@ -76,6 +78,14 @@ export function normalizeStoreState(
     provider,
     type,
     poster: typeof state.poster === "string" ? state.poster : DEFAULT_STORE_STATE.poster,
+    youtubeOrigin:
+      typeof state.youtubeOrigin === "string" && state.youtubeOrigin
+        ? state.youtubeOrigin
+        : DEFAULT_STORE_STATE.youtubeOrigin,
+    youtubeWidgetReferrer:
+      typeof state.youtubeWidgetReferrer === "string" && state.youtubeWidgetReferrer
+        ? state.youtubeWidgetReferrer
+        : DEFAULT_STORE_STATE.youtubeWidgetReferrer,
     useCustomControls:
       typeof state.useCustomControls === "boolean"
         ? state.useCustomControls
@@ -146,6 +156,15 @@ export function buildNormalizationPatch(
     patch.type = normalizedState.type;
   }
   if (typeof rawState.poster !== "string") patch.poster = normalizedState.poster;
+  if (typeof rawState.youtubeOrigin !== "string" && normalizedState.youtubeOrigin) {
+    patch.youtubeOrigin = normalizedState.youtubeOrigin;
+  }
+  if (
+    typeof rawState.youtubeWidgetReferrer !== "string" &&
+    normalizedState.youtubeWidgetReferrer
+  ) {
+    patch.youtubeWidgetReferrer = normalizedState.youtubeWidgetReferrer;
+  }
   if (typeof rawState.useCustomControls !== "boolean") {
     patch.useCustomControls = normalizedState.useCustomControls;
   }

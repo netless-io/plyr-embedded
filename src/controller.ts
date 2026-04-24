@@ -341,8 +341,10 @@ export class EmbeddedPlyrController {
     }
 
     this.cleanupYouTubeErrorHandling();
+    this.notifyYouTubeLayoutFixTeardown("controller-destroy");
     this.destroyMediaBridge();
     this.destroyPlayer();
+    this.app.destroy();
   }
 
   private readState(): PlayerStoreState {
@@ -574,6 +576,17 @@ export class EmbeddedPlyrController {
     const { default: PlyrConstructor } = (await import("plyr")) as unknown as {
       default: PlyrConstructor;
     };
+    const youtubeConfig: Record<string, unknown> = {
+      autoplay,
+      playsinline: 1,
+      rel: 0,
+    };
+    if (state.youtubeOrigin) {
+      youtubeConfig.origin = state.youtubeOrigin;
+    }
+    if (state.youtubeWidgetReferrer) {
+      youtubeConfig.widget_referrer = state.youtubeWidgetReferrer;
+    }
 
     this.player = new PlyrConstructor(this.playerElement, {
       autoplay,
@@ -586,11 +599,7 @@ export class EmbeddedPlyrController {
       keyboard: { focused: false, global: false },
       muted: state.muted,
       volume: state.volume,
-      youtube: {
-        autoplay,
-        playsinline: 1,
-        rel: 0,
-      },
+      youtube: youtubeConfig,
     });
 
     if (state.provider === "youtube") {
@@ -676,6 +685,7 @@ export class EmbeddedPlyrController {
     this.stopCalibrationLoop();
     this.stopConsistencyLoop();
     this.unbindPlayerEvents();
+    this.notifyYouTubeLayoutFixTeardown("player-destroy");
     this.customControls?.destroy();
     this.customControls = undefined;
     if (this.player) {
@@ -1036,6 +1046,31 @@ export class EmbeddedPlyrController {
     this.render();
   }
 
+  private notifyYouTubeLayoutFixTeardown(reason: string): void {
+    const iframe =
+      this.shell.stage.querySelector(".plyr__video-embed iframe") ||
+      this.playerElement?.querySelector("iframe") ||
+      this.player?.elements.container?.querySelector("iframe");
+
+    if (!(iframe instanceof HTMLIFrameElement)) {
+      return;
+    }
+
+    try {
+      iframe.contentWindow?.postMessage(
+        {
+          __netlessYouTubeLayoutFixControl: {
+            type: "teardown",
+            reason,
+          },
+        },
+        "*"
+      );
+    } catch {
+      // Ignore teardown failures during page shutdown.
+    }
+  }
+
   private render(): void {
     const state = this.currentState;
     this.shell.root.dataset.writable = this.app.isWritable ? "true" : "false";
@@ -1310,8 +1345,8 @@ export class CustomPlyrControls {
   };
 
   private bindEvent(): void {
-    this.playButton.addEventListener("click", this.syncPlay);
-    this.muteButton.addEventListener("click", this.syncMute);
+    this.playButton.addEventListener("pointerup", this.syncPlay);
+    this.muteButton.addEventListener("pointerup", this.syncMute);
     this.progressSliderContainer.addEventListener("pointerup", this.eventSeek);
     this.volumeSliderContainer.addEventListener("pointerup", this.eventVolume);
     this.progressSliderButton.addEventListener("pointerdown", this.bindDragProgress, {
@@ -1331,8 +1366,8 @@ export class CustomPlyrControls {
   }
 
   private unbindEvent(): void {
-    this.playButton.removeEventListener("click", this.syncPlay);
-    this.muteButton.removeEventListener("click", this.syncMute);
+    this.playButton.removeEventListener("pointerup", this.syncPlay);
+    this.muteButton.removeEventListener("pointerup", this.syncMute);
     this.progressSliderContainer.removeEventListener("pointerup", this.eventSeek);
     this.volumeSliderContainer.removeEventListener("pointerup", this.eventVolume);
     this.progressSliderButton.removeEventListener("pointerdown", this.bindDragProgress);

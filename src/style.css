@@ -38,7 +38,11 @@ body {
 
 .player-stage {
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: block;
   overflow: hidden;
   background: var(--player-bg);
 }
@@ -56,20 +60,32 @@ body {
 .player-stage .plyr {
   --plyr-color-main: #00b2ff;
   --plyr-video-control-color-hover: #00b2ff;
+  position: absolute;
+  inset: 0;
   background: var(--player-bg);
 }
 
 .player-stage .plyr--video,
 .player-stage .plyr--audio {
+  width: 100%;
   height: 100%;
   border-radius: 0;
 }
 
 .player-stage .plyr__poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .player-stage .plyr__video-wrapper {
+  position: absolute;
+  inset: 0;
+  width: 100%;
   height: 100%;
   padding-bottom: 0 !important;
   background: var(--player-bg);
@@ -115,8 +131,21 @@ body {
 
 .player-stage .plyr--youtube,
 .player-stage .plyr--vimeo {
+  width: 100%;
   height: 100%;
   border-radius: 0;
+}
+
+.player-stage .plyr__video-embed {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.player-stage .embedded-player {
+  position: absolute;
+  inset: 0;
 }
 
 .player-shell[data-custom-controls="true"] .plyr--video,

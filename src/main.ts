@@ -36,8 +36,19 @@ async function bootstrap(): Promise<void> {
       playerStore,
       shell,
     });
+    let destroyed = false;
+    const destroyController = () => {
+      if (destroyed) {
+        return;
+      }
+      destroyed = true;
+      void controller.destroy();
+      window.embeddedPlyrController = undefined;
+    };
 
     window.embeddedPlyrController = controller;
+    window.addEventListener("pagehide", destroyController, { once: true });
+    window.addEventListener("beforeunload", destroyController, { once: true });
     await controller.mount();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
